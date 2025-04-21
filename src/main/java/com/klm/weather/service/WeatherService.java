@@ -1,17 +1,20 @@
 package com.klm.weather.service;
 
+import com.klm.weather.dto.WeatherRequestDTO;
+import com.klm.weather.dto.WeatherResponseDTO;
 import com.klm.weather.model.Weather;
 import com.klm.weather.repository.WeatherRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.sql.Date;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,11 +23,14 @@ public class WeatherService {
     @Autowired
     private WeatherRepository weatherRepository;
 
-    public Weather saveWeather(Weather weather) {
-        return weatherRepository.save(weather);
+    @Transactional
+    public WeatherResponseDTO saveWeather(WeatherRequestDTO requestDTO) {
+        Weather weather = mapToEntity(requestDTO);
+        Weather saved = weatherRepository.save(weather);
+        return mapToResponseDTO(saved);
     }
 
-    public List<Weather> getWeathers(Optional<String> dateOpt, Optional<String> cityOpt, Optional<String> sortOpt) {
+    public List<WeatherResponseDTO> getWeathers(Optional<String> dateOpt, Optional<String> cityOpt, Optional<String> sortOpt) {
         List<Weather> result;
         Sort weatherSort = Sort.by("id").ascending();
         if (sortOpt.isPresent()) {
@@ -37,33 +43,51 @@ public class WeatherService {
             }
         }
         boolean hasDate = dateOpt.isPresent();
-            boolean hasCity = cityOpt.isPresent();
-            LocalDate localDate = hasDate ? LocalDate.parse(dateOpt.get()) : null;
-            DateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            Date date = dateOpt.map(value -> {
-                try {
-                    return simpleDateFormat.parse(value);
-                } catch (ParseException e) {
-                    throw new RuntimeException(e);
-                }
-            }).orElse(null);
-            List<String> cities = hasCity ? Arrays.stream(cityOpt.get().split(","))
-                    .map(String::toLowerCase)
-                    .collect(Collectors.toList()) : Collections.emptyList();
+        boolean hasCity = cityOpt.isPresent();
+        LocalDate date = hasDate ? LocalDate.parse(dateOpt.get()) : null;
+        List<String> cities = hasCity ? Arrays.stream(cityOpt.get().split(","))
+                .map(String::toLowerCase)
+                .collect(Collectors.toList()) : Collections.emptyList();
 
-            if (hasDate && hasCity) {
-                result = weatherRepository.findByDateAndCityIgnoreCaseIn(date, cities, weatherSort);
-            } else if (hasDate) {
-                result = weatherRepository.findByDate(date, weatherSort);
-            } else if (hasCity) {
-                result = weatherRepository.findByCityIgnoreCaseIn(cities, weatherSort);
-            } else {
-                result = weatherRepository.findAll(weatherSort);
-            }
-        return result;
+        if (hasDate && hasCity) {
+            result = weatherRepository.findByDateAndCityIgnoreCaseIn(date, cities, weatherSort);
+        } else if (hasDate) {
+            result = weatherRepository.findByDate(date, weatherSort);
+        } else if (hasCity) {
+            result = weatherRepository.findByCityIgnoreCaseIn(cities, weatherSort);
+        } else {
+            result = weatherRepository.findAll(weatherSort);
+        }
+
+        return result.stream().map(this::mapToResponseDTO).collect(Collectors.toList());
     }
 
-    public Optional<Weather> getWeatherById(Integer id) {
-        return weatherRepository.findById(id);
+    public WeatherResponseDTO getWeatherById(Integer id) {
+        Weather weather = weatherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Weather record not found for ID: " + id));
+        return mapToResponseDTO(weather);
+    }
+
+    private Weather mapToEntity(WeatherRequestDTO dto) {
+        return Weather.builder()
+                .date(dto.getDate())
+                .lat(dto.getLat())
+                .lon(dto.getLon())
+                .city(dto.getCity())
+                .state(dto.getState())
+                .temperatures(dto.getTemperatures())
+                .build();
+    }
+
+    private WeatherResponseDTO mapToResponseDTO(Weather entity) {
+        WeatherResponseDTO dto = new WeatherResponseDTO();
+        dto.setId(entity.getId());
+        dto.setDate(entity.getDate());
+        dto.setLat((float) entity.getLat());
+        dto.setLon((float) entity.getLon());
+        dto.setCity(entity.getCity());
+        dto.setState(entity.getState());
+        dto.setTemperatures(entity.getTemperatures());
+        return dto;
     }
 }
