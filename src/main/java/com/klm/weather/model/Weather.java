@@ -1,11 +1,13 @@
 package com.klm.weather.model;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
+@Builder
 @Entity
 public class Weather {
 

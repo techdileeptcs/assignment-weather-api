@@ -1,0 +1,124 @@
+openapi: 3.0.3
+info:
+  title: Weather API
+  description: A REST API for managing weather data with city, state, coordinates and temperatures.
+  version: "1.0"
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /weather:
+    get:
+      summary: Get list of weather records
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          description: Filter by date (yyyy-MM-dd)
+        - in: query
+          name: city
+          schema:
+            type: string
+          description: Filter by comma-separated cities
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [date, -date]
+          description: Sort by date ascending or descending
+      responses:
+        '200':
+          description: List of weather records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeatherResponse'
+
+    post:
+      summary: Create a new weather record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeatherRequest'
+      responses:
+        '201':
+          description: Created weather record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+
+  /weather/{id}:
+    get:
+      summary: Get weather by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Weather record found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+        '404':
+          description: Weather record not found
+
+components:
+  schemas:
+    WeatherRequest:
+      type: object
+      required:
+        - date
+        - lat
+        - lon
+        - city
+        - state
+        - temperatures
+      properties:
+        date:
+          type: string
+          format: date
+        lat:
+          type: number
+        lon:
+          type: number
+        city:
+          type: string
+        state:
+          type: string
+        temperatures:
+          type: array
+          items:
+            type: number
+
+    WeatherResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        lat:
+          type: number
+        lon:
+          type: number
+        city:
+          type: string
+        state:
+          type: string
+        temperatures:
+          type: array
+          items:
+            type: number
