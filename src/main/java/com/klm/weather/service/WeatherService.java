@@ -4,12 +4,12 @@ import com.klm.weather.dto.WeatherRequestDTO;
 import com.klm.weather.dto.WeatherResponseDTO;
 import com.klm.weather.model.Weather;
 import com.klm.weather.repository.WeatherRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
-import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,6 +30,7 @@ public class WeatherService {
         return mapToResponseDTO(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<WeatherResponseDTO> getWeathers(Optional<String> dateOpt, Optional<String> cityOpt, Optional<String> sortOpt) {
         List<Weather> result;
         Sort weatherSort = Sort.by("id").ascending();
@@ -58,19 +59,20 @@ public class WeatherService {
         } else {
             result = weatherRepository.findAll(weatherSort);
         }
-
+        if (CollectionUtils.isEmpty(result)) {
+            return Collections.emptyList();
+        }
         return result.stream().map(this::mapToResponseDTO).collect(Collectors.toList());
     }
 
     public WeatherResponseDTO getWeatherById(Integer id) {
-        Weather weather = weatherRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Weather record not found for ID: " + id));
+        Weather weather = weatherRepository.findById(id).orElse(null);
         return mapToResponseDTO(weather);
     }
 
     private Weather mapToEntity(WeatherRequestDTO dto) {
         return Weather.builder()
-                .date(dto.getDate())
+                .date(dto.toDate())
                 .lat(dto.getLat())
                 .lon(dto.getLon())
                 .city(dto.getCity())
@@ -80,11 +82,14 @@ public class WeatherService {
     }
 
     private WeatherResponseDTO mapToResponseDTO(Weather entity) {
+        if (entity == null) {
+            return null;
+        }
         WeatherResponseDTO dto = new WeatherResponseDTO();
         dto.setId(entity.getId());
-        dto.setDate(entity.getDate());
-        dto.setLat((float) entity.getLat());
-        dto.setLon((float) entity.getLon());
+        dto.setDate(entity.toLocalDate());
+        dto.setLat(entity.getLat());
+        dto.setLon(entity.getLon());
         dto.setCity(entity.getCity());
         dto.setState(entity.getState());
         dto.setTemperatures(entity.getTemperatures());

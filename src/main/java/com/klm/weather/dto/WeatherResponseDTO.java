@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -12,7 +12,7 @@ import java.util.List;
 @Data
 public class WeatherResponseDTO {
     private Integer id;
-    private Date date;
+    private LocalDate date;
     private Float lat;
     private Float lon;
     private String city;

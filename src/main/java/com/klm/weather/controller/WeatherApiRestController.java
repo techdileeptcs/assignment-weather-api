@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -48,6 +49,9 @@ public class WeatherApiRestController {
     @GetMapping("/{id}")
     public ResponseEntity<WeatherResponseDTO> getWeatherById(@PathVariable Integer id) {
         WeatherResponseDTO weather = weatherService.getWeatherById(id);
+        if (weather == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
         return new ResponseEntity<>(weather, HttpStatus.OK);
     }
 }
